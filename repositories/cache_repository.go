@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"testapi/models"
+	"testapi/utils"
 )
 
 type CacheRepository interface {
@@ -43,7 +44,7 @@ func (r *FileCacheRepository) UpdateCache(name, last string, newAddresses []mode
 
 	// Combine cached addresses with new addresses and remove duplicates
 	allAddresses := append(cachedAddresses, newAddresses...)
-	uniqueAddresses, _ := RemoveDuplicateAddresses(allAddresses)
+	uniqueAddresses, _ := utils.RemoveDuplicateAddresses(allAddresses)
 
 	// Write updated addresses back to the cache
 	cacheContent, _ := json.Marshal(uniqueAddresses)
@@ -68,23 +69,4 @@ func (r *FileCacheRepository) LoadCache(name, last string) ([]models.Address, er
 		json.NewDecoder(fileContent).Decode(&cachedAddresses)
 	}
 	return cachedAddresses, nil
-}
-
-func RemoveDuplicateAddresses(addresses []models.Address) ([]models.Address, int) {
-	addressMap := make(map[string]models.Address)
-	duplicatesRemoved := 0
-	for _, addr := range addresses {
-		key := addr.Country + "_" + addr.City
-		if _, exists := addressMap[key]; exists {
-			duplicatesRemoved++
-		}
-		addressMap[key] = addr
-	}
-
-	uniqueAddresses := []models.Address{}
-	for _, addr := range addressMap {
-		uniqueAddresses = append(uniqueAddresses, addr)
-	}
-
-	return uniqueAddresses, duplicatesRemoved
 }

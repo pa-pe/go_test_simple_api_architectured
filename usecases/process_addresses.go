@@ -5,6 +5,7 @@ import (
 
 	"testapi/models"
 	"testapi/repositories"
+	"testapi/utils"
 )
 
 type ProcessAddressesUseCase struct {
@@ -21,7 +22,7 @@ func (uc *ProcessAddressesUseCase) Execute(request models.RequestData) (models.R
 	startTime := time.Now()
 
 	// Remove duplicates from incoming request
-	uniqueAddresses, duplicatesRemoved := repositories.RemoveDuplicateAddresses(request.Addresses)
+	uniqueAddresses, duplicatesRemoved := utils.RemoveDuplicateAddresses(request.Addresses)
 
 	// Asynchronously update the cache with filtered addresses
 	go uc.CacheRepo.UpdateCache(request.Name, request.Last, uniqueAddresses)

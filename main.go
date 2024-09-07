@@ -20,27 +20,27 @@ type Config struct {
 }
 
 func loadConfig() (*Config, error) {
-	// Открываем файл
+	// Open config file
 	configFile, err := os.Open("config.yaml")
 	if err != nil {
 		return nil, err
 	}
 	defer configFile.Close()
 
-	// Читаем данные из файла
+	// Read config data
 	fileInfo, err := os.Stat("config.yaml")
 	if err != nil {
 		return nil, err
 	}
 
-	// Создаём буфер для чтения файла
+	// Read file buffer
 	data := make([]byte, fileInfo.Size())
 	_, err = configFile.Read(data)
 	if err != nil {
 		return nil, err
 	}
 
-	// Разбираем YAML
+	// Parse YAML
 	var config Config
 	err = yaml.Unmarshal(data, &config)
 	if err != nil {
@@ -58,6 +58,9 @@ func main() {
 	}
 
 	r := gin.Default()
+
+	// disable proxies
+	r.SetTrustedProxies(nil)
 
 	// Load HTML templates from the configured directory
 	r.LoadHTMLGlob(config.HTMLDir + "/*")
