@@ -1,0 +1,1 @@
+# go_test_simple_api_architectured
