@@ -1,0 +1,34 @@
+<html>
+<head>
+</head>
+<body>
+		<h1>JSON test page</h1>
+		<p>This form submit your JSON content using POST to <strong>/process</strong>.</p>
+		<form id="jsonForm">
+			<textarea id="jsonInput" rows="10" cols="50" placeholder="Enter JSON content here"></textarea><br><br>
+			<input type="button" value="Submit" onclick="submitForm()">
+		</form>
+
+		<script>
+			function submitForm() {
+				const jsonData = document.getElementById('jsonInput').value;
+
+				fetch('/process', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: jsonData
+				})
+				.then(response => response.json())
+				.then(data => {
+					console.log('Success:', data);
+					alert('Response: ' + JSON.stringify(data));
+				})
+				.catch((error) => {
+					console.error('Error:', error);
+				});
+			}
+		</script>
+</body>
+</html>

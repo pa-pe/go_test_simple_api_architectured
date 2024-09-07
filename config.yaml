@@ -1,0 +1,2 @@
+cache_dir: "./cache"
+html_dir: "./templates"
