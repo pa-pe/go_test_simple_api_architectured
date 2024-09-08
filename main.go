@@ -3,7 +3,9 @@ package main
 import (
 	"log"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 
 	"net/http"
 
@@ -77,6 +79,26 @@ func main() {
 	defer logFile.Close()
 	log.SetOutput(logFile)
 
+	// Channel for intercepting system signals
+	// interception of signals is needed to log the termination of the application
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	// Waiting for a system signal in a goroutine
+	go func() {
+		sig := <-sigs
+		log.Printf("Received signal: %v. Shutting down.", sig)
+		os.Exit(0)
+	}()
+
+	// The main logic of the application
+	runApp(config)
+	if err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
+}
+
+func runApp(config *Config) error {
 	r := gin.Default()
 
 	// disable proxies
@@ -117,9 +139,5 @@ func main() {
 	defer log.Println("Application stopped.")
 
 	// Start the server
-	r.Run(":8080")
-	if err != nil {
-		log.Fatalf("Failed to start server: %v", err)
-	}
-
+	return r.Run(":8080")
 }
