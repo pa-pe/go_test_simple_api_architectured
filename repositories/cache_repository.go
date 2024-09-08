@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"encoding/json"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -50,10 +51,16 @@ func (r *FileCacheRepository) UpdateCache(name, last string, newAddresses []mode
 	cacheContent, _ := json.Marshal(uniqueAddresses)
 	file, err := os.Create(cacheFile)
 	if err != nil {
+		log.Printf("Error creating cache file %s: %v", cacheFile, err)
 		return err
 	}
 	defer file.Close()
-	file.Write(cacheContent)
+
+	_, err = file.Write(cacheContent)
+	if err != nil {
+		log.Printf("Error writing to cache file %s: %v", cacheFile, err)
+		return err
+	}
 
 	return nil
 }

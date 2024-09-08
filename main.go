@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"path/filepath"
 
 	"net/http"
 
@@ -17,6 +18,8 @@ import (
 type Config struct {
 	CacheDir string `yaml:"cache_dir"`
 	HTMLDir  string `yaml:"html_dir"`
+	LogDir   string `yaml:"log_dir"`
+	LogFile  string `yaml:"log_file"`
 }
 
 func loadConfig() (*Config, error) {
@@ -57,6 +60,23 @@ func main() {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
+	// setup LogDir
+	if _, err := os.Stat(config.LogDir); os.IsNotExist(err) {
+		err := os.MkdirAll(config.LogDir, 0755)
+		if err != nil {
+			log.Fatalf("Error creating log directory %s: %v", config.LogDir, err)
+		}
+	}
+
+	// setup LogFile
+	logPath := filepath.Join(config.LogDir, config.LogFile)
+	logFile, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0664)
+	if err != nil {
+		log.Fatalf("Error opening log file %s: %v", logPath, err)
+	}
+	defer logFile.Close()
+	log.SetOutput(logFile)
+
 	r := gin.Default()
 
 	// disable proxies
@@ -93,9 +113,13 @@ func main() {
 		}
 	})
 
+	log.Println("Application started.")
+	defer log.Println("Application stopped.")
+
 	// Start the server
 	r.Run(":8080")
 	if err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
+
 }

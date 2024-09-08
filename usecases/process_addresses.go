@@ -19,18 +19,18 @@ func NewProcessAddressesUseCase(cacheRepo repositories.CacheRepository) *Process
 }
 
 func (uc *ProcessAddressesUseCase) Execute(request models.RequestData) (models.ResponseData, error) {
+	// startTime is needed to calculate the processing time
 	startTime := time.Now()
 
 	// Remove duplicates from incoming request
 	uniqueAddresses, duplicatesRemoved := utils.RemoveDuplicateAddresses(request.Addresses)
 
-	// Asynchronously update the cache with filtered addresses
+	// Asynchronously update the cache
 	go uc.CacheRepo.UpdateCache(request.Name, request.Last, uniqueAddresses)
 
 	// Calculate processing time
 	processingTime := time.Since(startTime).String()
 
-	// Formulate the response with additional processing info
 	response := models.ResponseData{
 		Name:      request.Name,
 		Last:      request.Last,

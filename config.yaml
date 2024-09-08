@@ -1,2 +1,4 @@
 cache_dir: "./cache"
 html_dir: "./templates"
+log_dir: "./logs"
+log_file: "app.log"
