@@ -129,6 +129,7 @@ func runApp(config *Config) error {
 	r.Use(func(c *gin.Context) {
 		c.Next()
 		if len(c.Errors) > 0 {
+			log.Printf("Internal server error: %v", c.Errors.String())
 			c.HTML(http.StatusInternalServerError, "500.html", gin.H{
 				"error": c.Errors.String(),
 			})
