@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"testapi/mocks"
 	"testapi/models"
+	"testapi/repositories/mocks"
 	"testapi/usecases"
 
 	"github.com/stretchr/testify/assert"
