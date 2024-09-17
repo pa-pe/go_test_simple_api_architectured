@@ -11,13 +11,23 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestProcessAddressesUseCase_Execute(t *testing.T) {
-	mockCacheRepo := new(mocks.CacheRepository)
+type ProcessAddressesTestSuite struct {
+	suite.Suite
+	mockCacheRepo *mocks.CacheRepository
+	useCase       *usecases.ProcessAddressesUseCase
+	wg            sync.WaitGroup
+	request       models.RequestData
+}
 
-	// test data
-	request := models.RequestData{
+func (suite *ProcessAddressesTestSuite) SetupTest() {
+	suite.mockCacheRepo = new(mocks.CacheRepository)
+	suite.useCase = usecases.NewProcessAddressesUseCase(suite.mockCacheRepo)
+
+	// Sample request data
+	suite.request = models.RequestData{
 		Name: "John",
 		Last: "Doe",
 		Addresses: []models.Address{
@@ -26,40 +36,47 @@ func TestProcessAddressesUseCase_Execute(t *testing.T) {
 		},
 	}
 
-	// Create a UseCase with a mock repository
-	uc := usecases.NewProcessAddressesUseCase(mockCacheRepo)
+	// Adding WaitGroup for goroutine
+	suite.wg.Add(1)
 
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	mockCacheRepo.On("UpdateCache", "John", "Doe", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
-		wg.Done()
+	// Mock UpdateCache behavior
+	suite.mockCacheRepo.On("UpdateCache", "John", "Doe", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
+		suite.wg.Done()
 	})
+}
 
-	response, err := uc.Execute(request)
+func (suite *ProcessAddressesTestSuite) TestExecute() {
+	// Execute the use case
+	response, err := suite.useCase.Execute(suite.request)
 
-	// Waiting for the goroutine to complete
-	wg.Wait()
+	// Wait for the goroutine to complete
+	suite.wg.Wait()
 
-	assert.NoError(t, err)
+	// Assert no errors
+	assert.NoError(suite.T(), err)
 
-	// Check that duplicates have been removed
-	assert.Equal(t, 1, len(response.Addresses))
+	// Assert duplicates removed
+	assert.Equal(suite.T(), 1, len(response.Addresses))
 
-	// We check that the processed information is correct
-	assert.Equal(t, "John", response.Name)
-	assert.Equal(t, "Doe", response.Last)
+	// Assert response data is correct
+	assert.Equal(suite.T(), "John", response.Name)
+	assert.Equal(suite.T(), "Doe", response.Last)
 
-	// Check that 1 duplicate was removed
-	assert.Equal(t, 1, response.ProcessingInfo.DuplicatesRemoved)
+	// Assert 1 duplicate was removed
+	assert.Equal(suite.T(), 1, response.ProcessingInfo.DuplicatesRemoved)
 
-	// Check that the processing time is not empty
-	assert.NotEmpty(t, response.ProcessingInfo.TimeTaken)
+	// Assert processing time is not empty
+	assert.NotEmpty(suite.T(), response.ProcessingInfo.TimeTaken)
 
-	// Check that the UpdateCache method was called
-	mockCacheRepo.AssertCalled(t, "UpdateCache", request.Name, request.Last, mock.Anything)
-
-	// We check that the processing time does not exceed the specified interval
+	// Assert processing time is within an acceptable range
 	processingDuration, _ := time.ParseDuration(response.ProcessingInfo.TimeTaken)
-	assert.Less(t, processingDuration.Milliseconds(), int64(100))
+	assert.Less(suite.T(), processingDuration.Milliseconds(), int64(100))
+
+	// Assert UpdateCache method was called
+	suite.mockCacheRepo.AssertCalled(suite.T(), "UpdateCache", suite.request.Name, suite.request.Last, mock.Anything)
+}
+
+// Execute the suite
+func TestProcessAddressesTestSuite(t *testing.T) {
+	suite.Run(t, new(ProcessAddressesTestSuite))
 }
