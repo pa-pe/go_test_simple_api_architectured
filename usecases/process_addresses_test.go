@@ -36,6 +36,9 @@ func (suite *ProcessAddressesTestSuite) SetupTest() {
 		},
 	}
 
+}
+
+func (suite *ProcessAddressesTestSuite) TestExecute() {
 	// Adding WaitGroup for goroutine
 	suite.wg.Add(1)
 
@@ -43,9 +46,7 @@ func (suite *ProcessAddressesTestSuite) SetupTest() {
 	suite.mockCacheRepo.On("UpdateCache", "John", "Doe", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
 		suite.wg.Done()
 	})
-}
 
-func (suite *ProcessAddressesTestSuite) TestExecute() {
 	// Execute the use case
 	response, err := suite.useCase.Execute(suite.request)
 
