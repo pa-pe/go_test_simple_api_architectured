@@ -1,20 +1,22 @@
 package controllers
 
 import (
+	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
-
 	"testapi/models"
 	"testapi/usecases"
-
-	"github.com/gin-gonic/gin"
 )
 
-type ProcessJsonController struct {
-	UseCase *usecases.ProcessAddressesUseCase
+type IProcessJsonController interface {
+	Process(c *gin.Context)
 }
 
-func NewProcessJsonController(useCase *usecases.ProcessAddressesUseCase) *ProcessJsonController {
+type ProcessJsonController struct {
+	UseCase usecases.IProcessAddressesUseCase
+}
+
+func NewProcessJsonController(useCase usecases.IProcessAddressesUseCase) *ProcessJsonController {
 	return &ProcessJsonController{
 		UseCase: useCase,
 	}

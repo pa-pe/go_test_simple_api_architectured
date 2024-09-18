@@ -8,6 +8,10 @@ import (
 	"testapi/utils"
 )
 
+type IProcessAddressesUseCase interface {
+	Execute(request models.RequestData) (models.ResponseData, error)
+}
+
 type ProcessAddressesUseCase struct {
 	CacheRepo repositories.CacheRepository
 }
