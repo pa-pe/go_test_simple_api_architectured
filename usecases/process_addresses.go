@@ -26,13 +26,7 @@ func (uc *ProcessAddressesUseCase) Execute(request models.RequestData) (models.R
 	uniqueAddresses, duplicatesRemoved := utils.RemoveDuplicateAddresses(request.Addresses)
 
 	// Asynchronously update the cache
-	//	go uc.CacheRepo.UpdateCache(request.Name, request.Last, uniqueAddresses)
-	go func() {
-		err := uc.CacheRepo.UpdateCache(request.Name, request.Last, uniqueAddresses)
-		if err != nil {
-			// Do nothing because all error logging in realized in UpdateCache function
-		}
-	}()
+	go uc.CacheRepo.UpdateCache(request.Name, request.Last, uniqueAddresses)
 
 	// Calculate processing time
 	processingTime := time.Since(startTime).String()
