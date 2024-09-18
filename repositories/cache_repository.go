@@ -25,7 +25,11 @@ func NewFileCacheRepository(cacheDir string) *FileCacheRepository {
 
 func (r *FileCacheRepository) ensureCacheDir() {
 	if _, err := os.Stat(r.CacheDir); os.IsNotExist(err) {
-		os.Mkdir(r.CacheDir, 0755)
+		err := os.Mkdir(r.CacheDir, 0755)
+		if err != nil {
+			log.Printf("Error creating cache directory %s: %s", r.CacheDir, err)
+			return
+		}
 	}
 }
 
@@ -40,7 +44,11 @@ func (r *FileCacheRepository) UpdateCache(name, last string, newAddresses []mode
 	if _, err := os.Stat(cacheFile); err == nil {
 		fileContent, _ := os.Open(cacheFile)
 		defer fileContent.Close()
-		json.NewDecoder(fileContent).Decode(&cachedAddresses)
+		err := json.NewDecoder(fileContent).Decode(&cachedAddresses)
+		if err != nil {
+			log.Printf("Error json.Decode cache file %s: %s", cacheFile, err)
+			return err
+		}
 	}
 
 	// Combine cached addresses with new addresses and remove duplicates
@@ -73,7 +81,11 @@ func (r *FileCacheRepository) LoadCache(name, last string) ([]models.Address, er
 	if _, err := os.Stat(cacheFile); err == nil {
 		fileContent, _ := os.Open(cacheFile)
 		defer fileContent.Close()
-		json.NewDecoder(fileContent).Decode(&cachedAddresses)
+		err := json.NewDecoder(fileContent).Decode(&cachedAddresses)
+		if err != nil {
+			log.Printf("Error json.Decode cache file %s: %s", cacheFile, err)
+			return nil, err
+		}
 	}
 	return cachedAddresses, nil
 }

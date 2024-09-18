@@ -92,7 +92,7 @@ func main() {
 	}()
 
 	// The main logic of the application
-	runApp(config)
+	err = runApp(config)
 	if err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
@@ -102,7 +102,11 @@ func runApp(config *Config) error {
 	r := gin.Default()
 
 	// disable proxies
-	r.SetTrustedProxies(nil)
+	err := r.SetTrustedProxies(nil)
+	if err != nil {
+		log.Fatalf("Failed to set trusted proxies: %v", err)
+		return err
+	}
 
 	// Load HTML templates from the configured directory
 	r.LoadHTMLGlob(config.HTMLDir + "/*")
