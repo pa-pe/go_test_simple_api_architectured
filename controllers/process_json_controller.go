@@ -8,10 +8,6 @@ import (
 	"testapi/usecases"
 )
 
-type IProcessJsonController interface {
-	Process(c *gin.Context)
-}
-
 type ProcessJsonController struct {
 	UseCase usecases.IProcessAddressesUseCase
 }
