@@ -1,52 +1,70 @@
 package controllers_test
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"testing"
-
 	"testapi/controllers"
 	"testapi/models"
 	"testapi/usecases/mocks"
+	"testing"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
 
+const validJson = `{
+    "name": "John",
+    "last": "Doe",
+    "addresses": [{"country": "USA", "city": "New York"}]
+}`
+
+//var requestData models.RequestData
+//
+//func init() {
+//	if err := json.Unmarshal([]byte(validJson), &requestData); err != nil {
+//		log.Fatalf("Error unmarshalling JSON: %v", err)
+//	}
+//}
+
 type ProcessJsonControllerTestSuite struct {
 	suite.Suite
 	mockUseCase *mocks.IProcessAddressesUseCase
 	controller  *controllers.ProcessJsonController
-	router      *gin.Engine
+	w           *httptest.ResponseRecorder
+	ctx         *gin.Context
 }
 
 func (suite *ProcessJsonControllerTestSuite) SetupTest() {
-	// Создаем mock usecase
+	// Create a mock use case
 	suite.mockUseCase = new(mocks.IProcessAddressesUseCase)
 
-	// Создаем контроллер с mock-юзкейсом
+	// Create the controller with the mock use case
 	suite.controller = controllers.NewProcessJsonController(suite.mockUseCase)
 
-	// Настраиваем роутинг Gin
-	suite.router = gin.Default()
-	suite.router.POST("/process", suite.controller.Process)
+	suite.w = httptest.NewRecorder()
+	suite.ctx, _ = gin.CreateTestContext(suite.w)
+}
+
+func (suite *ProcessJsonControllerTestSuite) TearDownTest() {
+	suite.mockUseCase = nil
+	suite.controller = nil
+	suite.w = nil
+	suite.ctx = nil
 }
 
 func (suite *ProcessJsonControllerTestSuite) TestProcess_ValidRequest() {
-	// Задаем ожидаемое поведение mock usecase
-	requestData := models.RequestData{
-		Name: "John",
-		Last: "Doe",
-		Addresses: []models.Address{
-			{Country: "USA", City: "New York"},
-		},
+	// Set the mock usecase behavior on error
+	var requestData models.RequestData
+	if err := json.Unmarshal([]byte(validJson), &requestData); err != nil {
+		suite.T().Fatalf("Error unmarshalling JSON: %v", err)
 	}
 	responseData := models.ResponseData{
-		Name:      "John",
-		Last:      "Doe",
+		Name:      requestData.Name,
+		Last:      requestData.Last,
 		Addresses: requestData.Addresses,
 		ProcessingInfo: models.ProcessingInfo{
 			TimeTaken:         "1ms",
@@ -56,74 +74,54 @@ func (suite *ProcessJsonControllerTestSuite) TestProcess_ValidRequest() {
 
 	suite.mockUseCase.On("Execute", requestData).Return(responseData, nil)
 
-	// Создаем приемник HTTP-ответа
-	w := httptest.NewRecorder()
+	suite.ctx.Request = &http.Request{
+		Body:   io.NopCloser(strings.NewReader(validJson)),
+		Header: http.Header{"Content-Type": []string{"application/json"}},
+	}
+	suite.controller.Process(suite.ctx)
 
-	// Создаем HTTP-запрос с валидным JSON
-	req, _ := http.NewRequest("POST", "/process", createJsonBody(`{
-		"name": "John",
-		"last": "Doe",
-		"addresses": [{"country": "USA", "city": "New York"}]
-	}`))
+	// Check the response
+	assert.Equal(suite.T(), http.StatusOK, suite.w.Code)
 
-	// Выполняем запрос
-	suite.router.ServeHTTP(w, req)
-
-	// Проверяем ответ
-	assert.Equal(suite.T(), http.StatusOK, w.Code)
-
-	// Контрольная проверка что мок настройки ожиданий были выполним, в данном случае это вызов метода "Execute"
+	// Verifying that the mock expectations were fulfilled ("Execute")
 	suite.mockUseCase.AssertExpectations(suite.T())
 }
 
 func (suite *ProcessJsonControllerTestSuite) TestProcess_InvalidJsonRequest() {
-	// Создаем приемник HTTP-ответа
-	w := httptest.NewRecorder()
+	// Making request with invalid json
+	suite.ctx.Request = &http.Request{
+		Body:   io.NopCloser(strings.NewReader(`invalid json`)),
+		Header: http.Header{"Content-Type": []string{"application/json"}},
+	}
 
-	// Создаем HTTP-запрос с невалидным JSON
-	req, _ := http.NewRequest("POST", "/process", createJsonBody(`invalid json`))
+	suite.controller.Process(suite.ctx)
 
-	// Выполняем запрос
-	suite.router.ServeHTTP(w, req)
+	// Checking the response code
+	assert.Equal(suite.T(), http.StatusBadRequest, suite.w.Code)
 
-	// Проверяем, что возвращается ошибка
-	assert.Equal(suite.T(), http.StatusBadRequest, w.Code)
-
-	// Проверяем что далее код не выполнялся
+	// Verify that the UseCase was not called
 	suite.mockUseCase.AssertNotCalled(suite.T(), "Execute")
 }
 
 func (suite *ProcessJsonControllerTestSuite) TestProcess_UseCaseError() {
-	// Задаем поведение mock usecase при ошибке
-	requestData := models.RequestData{
-		Name: "John",
-		Last: "Doe",
-		Addresses: []models.Address{
-			{Country: "USA", City: "New York"},
-		},
+	// Set the mock usecase behavior on error
+	var requestData models.RequestData
+	if err := json.Unmarshal([]byte(validJson), &requestData); err != nil {
+		suite.T().Fatalf("Error unmarshalling JSON: %v", err)
 	}
 	suite.mockUseCase.On("Execute", requestData).Return(models.ResponseData{}, assert.AnError)
 
-	// Создаем HTTP-запрос с валидным JSON
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", "/process", createJsonBody(`{
-		"name": "John",
-		"last": "Doe",
-		"addresses": [{"country": "USA", "city": "New York"}]
-	}`))
+	suite.ctx.Request = &http.Request{
+		Body:   io.NopCloser(strings.NewReader(validJson)),
+		Header: http.Header{"Content-Type": []string{"application/json"}},
+	}
+	suite.controller.Process(suite.ctx)
 
-	// Выполняем запрос
-	suite.router.ServeHTTP(w, req)
+	// Checking the response error code
+	assert.Equal(suite.T(), http.StatusInternalServerError, suite.w.Code)
 
-	// Проверяем, что возвращается ошибка
-	assert.Equal(suite.T(), http.StatusInternalServerError, w.Code)
-
-	// Контрольная проверка что мок настройки ожиданий были выполним, в данном случае это вызов метода "Execute"
+	// Verifying that the mock expectations were fulfilled ("Execute")
 	suite.mockUseCase.AssertExpectations(suite.T())
-}
-
-func createJsonBody(jsonStr string) io.Reader {
-	return strings.NewReader(jsonStr)
 }
 
 func TestProcessJsonControllerTestSuite(t *testing.T) {
