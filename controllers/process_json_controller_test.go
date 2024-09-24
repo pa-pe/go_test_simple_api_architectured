@@ -16,21 +16,14 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-const requestValidJson = `{
-    "name": "John",
-    "last": "Doe",
-    "addresses": [{"country": "USA", "city": "New York"}]
-}`
-
-var requestValidData models.RequestData
-
 type ProcessJsonControllerTestSuite struct {
 	suite.Suite
-	mockUseCase *mocks.IProcessAddressesUseCase
-	controller  *controllers.ProcessJsonController
-	w           *httptest.ResponseRecorder
-	ctx         *gin.Context
-	//	requestValidData *models.RequestData
+	mockUseCase      *mocks.IProcessAddressesUseCase
+	controller       *controllers.ProcessJsonController
+	w                *httptest.ResponseRecorder
+	ctx              *gin.Context
+	requestValidJson string
+	requestValidData *models.RequestData
 }
 
 func (suite *ProcessJsonControllerTestSuite) SetupSuite() {
@@ -40,7 +33,13 @@ func (suite *ProcessJsonControllerTestSuite) SetupSuite() {
 	// Create the controller with the mock use case
 	suite.controller = controllers.NewProcessJsonController(suite.mockUseCase)
 
-	if err := json.Unmarshal([]byte(requestValidJson), &requestValidData); err != nil {
+	suite.requestValidJson = `{
+		"name": "John",
+		"last": "Doe",
+		"addresses": [{"country": "USA", "city": "New York"}]
+	}`
+
+	if err := json.Unmarshal([]byte(suite.requestValidJson), &suite.requestValidData); err != nil {
 		suite.T().Fatalf("Error unmarshalling JSON: %v", err)
 	}
 }
@@ -58,19 +57,19 @@ func (suite *ProcessJsonControllerTestSuite) TearDownTest() {
 func (suite *ProcessJsonControllerTestSuite) TestProcess_ValidRequest() {
 	// Set the mock usecase behavior on error
 	responseData := models.ResponseData{
-		Name:      requestValidData.Name,
-		Last:      requestValidData.Last,
-		Addresses: requestValidData.Addresses,
+		Name:      suite.requestValidData.Name,
+		Last:      suite.requestValidData.Last,
+		Addresses: suite.requestValidData.Addresses,
 		ProcessingInfo: models.ProcessingInfo{
 			TimeTaken:         "1ms",
 			DuplicatesRemoved: 0,
 		},
 	}
 
-	suite.mockUseCase.On("Execute", requestValidData).Return(responseData, nil)
+	suite.mockUseCase.On("Execute", *suite.requestValidData).Return(responseData, nil)
 
 	suite.ctx.Request = &http.Request{
-		Body:   io.NopCloser(strings.NewReader(requestValidJson)),
+		Body:   io.NopCloser(strings.NewReader(suite.requestValidJson)),
 		Header: http.Header{"Content-Type": []string{"application/json"}},
 	}
 	suite.controller.Process(suite.ctx)
@@ -100,10 +99,10 @@ func (suite *ProcessJsonControllerTestSuite) TestProcess_InvalidJsonRequest() {
 
 func (suite *ProcessJsonControllerTestSuite) TestProcess_UseCaseError() {
 	// Set the mock usecase behavior on error
-	suite.mockUseCase.On("Execute", requestValidData).Return(models.ResponseData{}, assert.AnError)
+	suite.mockUseCase.On("Execute", *suite.requestValidData).Return(models.ResponseData{}, assert.AnError)
 
 	suite.ctx.Request = &http.Request{
-		Body:   io.NopCloser(strings.NewReader(requestValidJson)),
+		Body:   io.NopCloser(strings.NewReader(suite.requestValidJson)),
 		Header: http.Header{"Content-Type": []string{"application/json"}},
 	}
 	suite.controller.Process(suite.ctx)
